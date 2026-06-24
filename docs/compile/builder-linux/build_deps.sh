@@ -11,17 +11,17 @@ dl_deps()
 	(
 	cd "$DEPS"
 	exists_dir libnfnetlink-* ||
-		curl -Lo - https://www.netfilter.org/pub/libnfnetlink/libnfnetlink-1.0.2.tar.bz2 | tar -xj || exit 5
+		curl $CURL_OPT -Lo - https://www.netfilter.org/pub/libnfnetlink/libnfnetlink-1.0.2.tar.bz2 | tar -xj || exit 5
 	exists_dir libmnl-* ||
-		curl -Lo - https://www.netfilter.org/pub/libmnl/libmnl-1.0.5.tar.bz2 | tar -xj || exit 5
+		curl $CURL_OPT -Lo - https://www.netfilter.org/pub/libmnl/libmnl-1.0.5.tar.bz2 | tar -xj || exit 5
 	exists_dir libnetfilter_queue-* ||
-		curl -Lo - https://www.netfilter.org/pub/libnetfilter_queue/libnetfilter_queue-1.0.5.tar.bz2 | tar -xj || exit 5
+		curl $CURL_OPT -Lo - https://www.netfilter.org/pub/libnetfilter_queue/libnetfilter_queue-1.0.5.tar.bz2 | tar -xj || exit 5
 	exists_dir zlib-* ||
-		curl -Lo - https://zlib.net/fossils/zlib-1.3.2.tar.gz | tar -xz || exit 5
+		curl $CURL_OPT -Lo - https://zlib.net/fossils/zlib-1.3.2.tar.gz | tar -xz || exit 5
 	exists_dir luajit2-* ||
-		curl -Lo - https://github.com/openresty/luajit2/archive/refs/tags/v${LUAJIT_RELEASE}.tar.gz | tar -xz || exit 5
+		curl $CURL_OPT -Lo - https://github.com/openresty/luajit2/archive/refs/tags/v${LUAJIT_RELEASE}.tar.gz | tar -xz || exit 5
 	exists_dir lua-* ||
-		curl -Lo - https://www.lua.org/ftp/lua-${LUA_RELEASE}.tar.gz | tar -xz || exit 5
+		curl $CURL_OPT -Lo - https://www.lua.org/ftp/lua-${LUA_RELEASE}.tar.gz | tar -xz || exit 5
 	)
 }
 

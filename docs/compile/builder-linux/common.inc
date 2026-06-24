@@ -1,6 +1,8 @@
 EXEDIR="$(dirname "$0")"
 EXEDIR="$(cd "$EXEDIR"; pwd)"
 
+CURL_OPT="--connect-timeout 5 --max-time 120 --retry 5 --retry-delay 30"
+
 TOOLCHAINS="$EXEDIR/toolchain"
 DEPS="$EXEDIR/deps"
 STAGE="$EXEDIR/staging"
