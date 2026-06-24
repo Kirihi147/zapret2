@@ -38,7 +38,7 @@ pktws_hostfake_vary()
 	local ok_any=0 fooling="$3"
 	pktws_hostfake_vary_ "$1" "$2" "$3" "$4" "$5" && ok_any=1
 	# duplicate SYN with MD5
-	contains "$fooling" tcp_md5 && \
+	[ "$NOTEST_OUTRANGE_HTTPS" != 1 -o "$PAYLOAD" != "--payload=tls_client_hello" ] && contains "$fooling" tcp_md5 && \
 		pktws_hostfake_vary_  "$1" "$2" "$3" "$4" "${5:+$5 }--payload=empty --out-range=<s1 --lua-desync=send:$TCP_MD5" && ok_any=1
 	[ "$ok_any" = 1 ]
 }
@@ -67,6 +67,7 @@ pktws_check_hostfake()
 		# orig-ttl=1 with start/cutoff limiter drops empty ACK packet in response to SYN,ACK. it does not reach DPI or server.
 		# missing ACK is transmitted in the first data packet of TLS/HTTP proto
 		for f in '' "--payload=empty --out-range=s1<d1 --lua-desync=pktmod:ip${IPVV}_ttl=1"; do
+			[ "$NOTEST_OUTRANGE_HTTPS" = 1 -a "$PAYLOAD" = "--payload=tls_client_hello" -a -n "$f" ] && continue
 			pktws_hostfake_vary $testf $domain "ip${IPVV}_ttl=$ttl" "$pre" "$f" && [ "$SCANLEVEL" != force ] && break
 		done
 		[ "$ok" = 1 ] && break
@@ -76,6 +77,7 @@ pktws_check_hostfake()
 	done
 	for ttl in $attls; do
 		for f in '' "--payload=empty --out-range=s1<d1 --lua-desync=pktmod:ip${IPVV}_ttl=1"; do
+			[ "$NOTEST_OUTRANGE_HTTPS" = 1 -a "$PAYLOAD" = "--payload=tls_client_hello" -a -n "$f" ] && continue
 			pktws_hostfake_vary $testf $domain "ip${IPVV}_autottl=-$ttl,3-20" "$pre" "$f" && [ "$SCANLEVEL" != force ] && break
 		done
 	done

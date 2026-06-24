@@ -30,6 +30,7 @@ pktws_check_faked()
 			# missing ACK is transmitted in the first data packet of TLS/HTTP proto
 			for split in $splits; do
 				for f in '' "--payload=empty --out-range=s1<d1 --lua-desync=pktmod:ip${IPVV}_ttl=1"; do
+					[ "$NOTEST_OUTRANGE_HTTPS" = 1 -a "$PAYLOAD" = "--payload=tls_client_hello" -a -n "$f" ] && continue
 					pktws_curl_test_update $testf $domain ${FAKED_PATTERN:+--blob=faked_pat:@"$FAKED_PATTERN" }$pre $PAYLOAD --lua-desync=$splitf:${FAKED_PATTERN:+pattern=faked_pat:}pos=$split:ip${IPVV}_ttl=$ttl:repeats=$FAKE_REPEATS $f && {
 						ok=1
 						[ "$SCANLEVEL" = force ] || break
@@ -42,12 +43,13 @@ pktws_check_faked()
 			for split in $splits; do
 				pktws_curl_test_update $testf $domain ${FAKED_PATTERN:+--blob=faked_pat:@"$FAKED_PATTERN" }$pre $PAYLOAD --lua-desync=$splitf:${FAKED_PATTERN:+pattern=faked_pat:}pos=$split:$fooling && ok=1
 				# duplicate SYN with MD5
-				contains "$fooling" tcp_md5 && pktws_curl_test_update $testf $domain ${FAKED_PATTERN:+--blob=faked_pat:@"$FAKED_PATTERN" }$pre $PAYLOAD --lua-desync=$splitf:${FAKED_PATTERN:+pattern=faked_pat:}pos=$split:$fooling:repeats=$FAKE_REPEATS --payload=empty --out-range="<s1" --lua-desync=send:$TCP_MD5 && ok=1
+				[ "$NOTEST_OUTRANGE_HTTPS" != 1 -o "$PAYLOAD" != "--payload=tls_client_hello" ] && contains "$fooling" tcp_md5 && pktws_curl_test_update $testf $domain ${FAKED_PATTERN:+--blob=faked_pat:@"$FAKED_PATTERN" }$pre $PAYLOAD --lua-desync=$splitf:${FAKED_PATTERN:+pattern=faked_pat:}pos=$split:$fooling:repeats=$FAKE_REPEATS --payload=empty --out-range="<s1" --lua-desync=send:$TCP_MD5 && ok=1
 			done
 		done
 		for ttl in $attls; do
 			for split in $splits; do
 				for f in '' "--payload=empty --out-range=s1<d1 --lua-desync=pktmod:ip${IPVV}_ttl=1"; do
+					[ "$NOTEST_OUTRANGE_HTTPS" = 1 -a "$PAYLOAD" = "--payload=tls_client_hello" -a -n "$f" ] && continue
 					pktws_curl_test_update $testf $domain ${FAKED_PATTERN:+--blob=faked_pat:@"$FAKED_PATTERN" }$pre $PAYLOAD --lua-desync=$splitf:${FAKED_PATTERN:+pattern=faked_pat:}pos=$split:ip${IPVV}_autottl=-$ttl,3-20:repeats=$FAKE_REPEATS $f && {
 						ok=1
 						[ "$SCANLEVEL" = force ] || break

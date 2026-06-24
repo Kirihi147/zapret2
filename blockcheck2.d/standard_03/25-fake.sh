@@ -41,6 +41,7 @@ pktws_check_http()
 		# missing ACK is transmitted in the first data packet of TLS/HTTP proto
 		for ff in $fake 0x00000000; do
 			for f in '' "--payload=empty --out-range=s1<d1 --lua-desync=pktmod:ip${IPVV}_ttl=1"; do
+				[ "$NOTEST_OUTRANGE_HTTPS" = 1 -a "$PAYLOAD" = "--payload=tls_client_hello" -a -n "$f" ] && continue
 				pktws_curl_test_update $testf $domain ${FAKE_HTTP:+--blob=$fake:@"$FAKE_HTTP" }$PAYLOAD "--lua-desync=fake:blob=${ff}:ip${IPVV}_ttl=$ttl:repeats=$FAKE_REPEATS" $f && {
 					ok=1
 					[ "$SCANLEVEL" = force ] || break
@@ -53,12 +54,13 @@ pktws_check_http()
 		for ff in $fake 0x00000000; do
 			pktws_curl_test_update $testf $domain ${FAKE_HTTP:+--blob=fake_http:@"$FAKE_HTTP" }$PAYLOAD --lua-desync=fake:blob=$ff:$fooling:repeats=$FAKE_REPEATS && ok=1
 			# duplicate SYN with MD5
-			contains "$fooling" tcp_md5 && pktws_curl_test_update $testf $domain ${FAKE_HTTP:+--blob=$fake:@"$FAKE_HTTP" }$PAYLOAD --lua-desync=fake:blob=$ff:$fooling:repeats=$FAKE_REPEATS --payload=empty "--out-range=<s1" --lua-desync=send:$TCP_MD5 && ok=1
+			[ "$NOTEST_OUTRANGE_HTTPS" != 1 -o "$PAYLOAD" != "--payload=tls_client_hello" ] && contains "$fooling" tcp_md5 && pktws_curl_test_update $testf $domain ${FAKE_HTTP:+--blob=$fake:@"$FAKE_HTTP" }$PAYLOAD --lua-desync=fake:blob=$ff:$fooling:repeats=$FAKE_REPEATS --payload=empty "--out-range=<s1" --lua-desync=send:$TCP_MD5 && ok=1
 		done
 	done
 	for ttl in $attls; do
 		for ff in $fake 0x00000000; do
 			for f in '' "--payload=empty --out-range=s1<d1 --lua-desync=pktmod:ip${IPVV}_ttl=1"; do
+				[ "$NOTEST_OUTRANGE_HTTPS" = 1 -a "$PAYLOAD" = "--payload=tls_client_hello" -a -n "$f" ] && continue
 				pktws_curl_test_update $testf $domain  ${FAKE_HTTP:+--blob=$fake:@"$FAKE_HTTP" }$PAYLOAD --lua-desync=fake:blob=$ff:ip${IPVV}_autottl=-$ttl,3-20:repeats=$FAKE_REPEATS $f && {
 					ok=1
 					[ "$SCANLEVEL" = force ] || break
@@ -77,10 +79,11 @@ pktws_fake_https_vary_()
 	local ok_any=0 testf=$1 domain="$2" fooling="$3" pre="$4" post="$5" tls_mod="rnd,dupsid${TLS_MOD_SNI:+,sni=$TLS_MOD_SNI}"
 	shift; shift; shift
 	pktws_curl_test_update $testf $domain ${FAKE_HTTPS:+--blob=$fake:@"$FAKE_HTTPS" }$pre $PAYLOAD --lua-desync=fake:blob=$fake:$fooling:repeats=$FAKE_REPEATS $post && ok_any=1
-	pktws_curl_test_update $testf $domain $pre $PAYLOAD --lua-desync=fake:blob=0x00000000:$fooling:repeats=$FAKE_REPEATS $post && ok_any=1
-	pktws_curl_test_update $testf $domain ${FAKE_HTTPS:+--blob=$fake:@"$FAKE_HTTPS" }$pre $PAYLOAD --lua-desync=fake:blob=0x00000000:$fooling:repeats=$FAKE_REPEATS --lua-desync=fake:blob=$fake:$fooling:tls_mod=$tls_mod:repeats=$FAKE_REPEATS $post && ok_any=1
+	[ "$NOTEST_BLANK_BLOB_HTTPS" = 1 ] || { pktws_curl_test_update $testf $domain $pre $PAYLOAD --lua-desync=fake:blob=0x00000000:$fooling:repeats=$FAKE_REPEATS $post && ok_any=1; }
+	[ "$NOTEST_BLANK_BLOB_HTTPS" = 1 ] || { pktws_curl_test_update $testf $domain ${FAKE_HTTPS:+--blob=$fake:@"$FAKE_HTTPS" }$pre $PAYLOAD --lua-desync=fake:blob=0x00000000:$fooling:repeats=$FAKE_REPEATS --lua-desync=fake:blob=$fake:$fooling:tls_mod=$tls_mod:repeats=$FAKE_REPEATS $post && ok_any=1; }
+	pktws_curl_test_update $testf $domain ${FAKE_HTTPS:+--blob=$fake:@"$FAKE_HTTPS" }$pre $PAYLOAD --lua-desync=fake:blob=$fake:$fooling:tls_mod=$tls_mod:repeats=$FAKE_REPEATS $post && ok_any=1
 	pktws_curl_test_update $testf $domain ${FAKE_HTTPS:+--blob=$fake:@"$FAKE_HTTPS" }$pre $PAYLOAD --lua-desync=multisplit:blob=$fake:$fooling:pos=2:nodrop:repeats=$FAKE_REPEATS $post && ok_any=1
-	pktws_curl_test_update $testf $domain ${FAKE_HTTPS:+--blob=$fake:@"$FAKE_HTTPS" }$pre $PAYLOAD --lua-desync=fake:blob=$fake:$fooling:tls_mod=$tls_mod,padencap:repeats=$FAKE_REPEATS $post && ok_any=1
+	[ "$NOTEST_PADENCAP_HTTPS" = 1 ] || { pktws_curl_test_update $testf $domain ${FAKE_HTTPS:+--blob=$fake:@"$FAKE_HTTPS" }$pre $PAYLOAD --lua-desync=fake:blob=$fake:$fooling:tls_mod=$tls_mod,padencap:repeats=$FAKE_REPEATS $post && ok_any=1; }
 	[ "$ok_any" = 1 ] && ok=1
 }
 pktws_fake_https_vary()
@@ -88,7 +91,7 @@ pktws_fake_https_vary()
 	local ok_any=0 fooling="$3"
 	pktws_fake_https_vary_ "$1" "$2" "$3" "$4" "$5" && ok_any=1
 	# duplicate SYN with MD5
-	contains "$fooling" tcp_md5 && \
+	[ "$NOTEST_OUTRANGE_HTTPS" != 1 -o "$PAYLOAD" != "--payload=tls_client_hello" ] && contains "$fooling" tcp_md5 && \
 		pktws_fake_https_vary_  "$1" "$2" "$3" "$4" "${5:+$5 }--payload=empty --out-range=<s1 --lua-desync=send:$TCP_MD5" && ok_any=1
 	[ "$ok_any" = 1 ]
 }
@@ -122,6 +125,7 @@ pktws_check_https_tls()
 		# orig-ttl=1 with start/cutoff limiter drops empty ACK packet in response to SYN,ACK. it does not reach DPI or server.
 		# missing ACK is transmitted in the first data packet of TLS/HTTP proto
 		for f in '' "--payload=empty --out-range=s1<d1 --lua-desync=pktmod:ip${IPVV}_ttl=1"; do
+			[ "$NOTEST_OUTRANGE_HTTPS" = 1 -a "$PAYLOAD" = "--payload=tls_client_hello" -a -n "$f" ] && continue
 			pktws_fake_https_vary $testf $domain "ip${IPVV}_ttl=$ttl" "$pre" "$f" && [ "$SCANLEVEL" != force ] && break
 		done
 		[ "$ok" = 1 ] && break
@@ -131,6 +135,7 @@ pktws_check_https_tls()
 	done
 	for ttl in $attls; do
 		for f in '' "--payload=empty --out-range=s1<d1 --lua-desync=pktmod:ip${IPVV}_ttl=1"; do
+			[ "$NOTEST_OUTRANGE_HTTPS" = 1 -a "$PAYLOAD" = "--payload=tls_client_hello" -a -n "$f" ] && continue
 			pktws_fake_https_vary $testf $domain "ip${IPVV}_autottl=-$ttl,3-20" "$pre" "$f" && [ "$SCANLEVEL" != force ] && break
 		done
 	done

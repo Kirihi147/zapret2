@@ -37,7 +37,7 @@ pktws_hostfake_vary()
 	local fooling="$3"
 	pktws_hostfake_vary_ "$1" "$2" "$3" "$4" "$5"
 	# duplicate SYN with MD5
-	contains "$fooling" tcp_md5 && \
+	[ "$NOTEST_OUTRANGE_HTTPS" != 1 -o "$PAYLOAD" != "--payload=tls_client_hello" ] && contains "$fooling" tcp_md5 && \
 		pktws_hostfake_vary_  "$1" "$2" "$3" "$4" "${5:+$5 }--payload=empty --out-range=<s1 --lua-desync=send:$TCP_MD5"
 }
 
@@ -53,7 +53,7 @@ pktws_check_hostfake()
 	# reuse TLS_MOD_SNI as the fake host only when HOSTFAKE is not explicitly set.
 	[ "$PAYLOAD" = "--payload=tls_client_hello" -a -z "$hostfake" ] && hostfake="$TLS_MOD_SNI"
 
-	[ "$need_hostfakesplit" = 0 ] && return 0
+	[ "$need_hostfakesplit" = 0 -a "$SCANLEVEL" != force ] && return 0
 
 	[ "$MAX_TTL" = 0 ] || ttls=$(seq -s ' ' $MIN_TTL $MAX_TTL)
 	[ "$MAX_AUTOTTL_DELTA" = 0 ] || attls=$(seq -s ' ' $MIN_AUTOTTL_DELTA $MAX_AUTOTTL_DELTA)
@@ -61,6 +61,7 @@ pktws_check_hostfake()
 	ok=0
 	for ttl in $ttls; do
 		for f in '' "--payload=empty --out-range=s1<d1 --lua-desync=pktmod:ip${IPVV}_ttl=1"; do
+			[ "$NOTEST_OUTRANGE_HTTPS" = 1 -a "$PAYLOAD" = "--payload=tls_client_hello" -a -n "$f" ] && continue
 			pktws_hostfake_vary $testf $domain "ip${IPVV}_ttl=$ttl" "$pre" "$f" && {
 				ok=1
 				[ "$SCANLEVEL" = force ] || break
@@ -73,6 +74,7 @@ pktws_check_hostfake()
 	done
 	for ttl in $attls; do
 		for f in '' "--payload=empty --out-range=s1<d1 --lua-desync=pktmod:ip${IPVV}_ttl=1"; do
+			[ "$NOTEST_OUTRANGE_HTTPS" = 1 -a "$PAYLOAD" = "--payload=tls_client_hello" -a -n "$f" ] && continue
 			pktws_hostfake_vary $testf $domain "ip${IPVV}_autottl=-$ttl,3-20" "$pre" "$f" && {
 				ok=1
 				[ "$SCANLEVEL" = force ] || break

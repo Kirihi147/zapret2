@@ -27,6 +27,20 @@ HOSTFAKE=${HOSTFAKE:-}
 # When enabled, only the normal HTTPS/TLS1.2 pass is executed.
 NOTEST_WSSIZE_HTTPS=${NOTEST_WSSIZE_HTTPS:-0}
 
+# Skip HTTPS strategies that add tls_mod padencap.
+# Non-padencap tls_mod strategies remain enabled.
+NOTEST_PADENCAP_HTTPS=${NOTEST_PADENCAP_HTTPS:-0}
+
+# Skip HTTPS strategies that use an explicit blank fake blob (0x00000000).
+# Strategies with normal fake TLS blobs remain enabled.
+NOTEST_BLANK_BLOB_HTTPS=${NOTEST_BLANK_BLOB_HTTPS:-0}
+
+# Skip HTTPS strategies that add an out-range helper branch, including:
+#   --payload=empty --out-range=s1<d1 --lua-desync=pktmod:ip*_ttl=1
+#   --payload=empty --out-range=<s1 --lua-desync=send:tcp_md5
+# Applies only to HTTPS/TLS generators. Normal non-out-range strategies remain enabled.
+NOTEST_OUTRANGE_HTTPS=${NOTEST_OUTRANGE_HTTPS:-0}
+
 MIN_TTL=${MIN_TTL:-1}
 MAX_TTL=${MAX_TTL:-12}
 MIN_AUTOTTL_DELTA=${MIN_AUTOTTL_DELTA:-1}
